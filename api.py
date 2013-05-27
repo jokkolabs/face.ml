@@ -7,7 +7,7 @@ from flask import request
 from utils import (success_response, error_response,
                    get_remaining_votes, vote_for_a_pic, get_winner,
                    get_random_pictures, get_user_from,
-                   create_raw_from_url, demongo_cursor
+                   create_raw_from_url, demongo_cursor,
                    RawPictures, UNKNOWN, FACE_PICTURE, BAD_PICTURE)
 from facebook_utils import get_data_from_fql, find_jpeg_in_album
 

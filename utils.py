@@ -38,10 +38,11 @@ ID = 'picture_id'
 # Error messages strings
 ERROR_MESSAGES = {
     'LIMIT_GENERIC': u"Vous ne pouvez plus voter aujourd'hui: "
-                     u"Les votes sont limités à 10 votes/ jour pour "
+                     u"Les votes sont limités à %d votes/ jour pour "
                      u"les personnes identifiées via Facebook"
-                     u"et 3 votes / jour pour ceux qui ne sont "
-                     u"pas identifiés",
+                     u"et %d votes / jour pour ceux qui ne sont "
+                     u"pas identifiés" % (MAX_VOTES_LOGGED_IN,
+                                          MAX_VOTES_ANONYMOUS),
     'LIMIT_LOGGED_IN': u"Vous ne pouvez plus voter aujourd'hui: les votes "
                        u"sont limités à %d par jour!" % MAX_VOTES_LOGGED_IN,
     'LIMIT_ANONYMOUS': u"Vous ne pouvez plus voter aujourd'hui: les votes "

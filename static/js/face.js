@@ -61,7 +61,7 @@ function startupLoadStep1() {
 	var container = $(".container");
 	var line_tmpl = "<div class='row-fluid' />";
 	var line;
-	$.getJSON('/all_unknown', {limit: 30}).done(function (response) {
+	$.getJSON('/all_unknown', {limit: limit}).done(function (response) {
 		console.log("answer");
 		$.each(response.data, function (idx, picture) {
 			console.log(idx);
