@@ -1,0 +1,9 @@
+
+div.facecontainer {
+    overflow: hidden;
+    background-color: #CCC;
+}
+
+div.facecontainer  img {
+    max-width : none;
+}

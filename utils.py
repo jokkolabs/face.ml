@@ -22,6 +22,7 @@ REFUSED = 'REFUSED'
 UNKNOWN = 'UNKNOWN'
 FACE_PICTURE = 'FACE_PICTURE'
 BAD_PICTURE = 'BAD_PICTURE'
+FACE_DONE = 'FACE_DONE'
 
 
 # types of User
@@ -88,7 +89,10 @@ def demongo(obj):
 
         Saves bandwidth since we don't use it '''
     nobj = copy.deepcopy(obj)
-    del nobj['_id']
+    try:
+        del nobj['_id']
+    except KeyError:
+        pass
     return nobj
 
 
@@ -110,7 +114,7 @@ class User(dict):
 
 def get_user_from(req):
     ip_addr = req.remote_addr
-    fb_username = req.form.get('fb_username', None)
+    fb_username = req.args.get('fb_username', None)
     if fb_username:
         return User({'type': LOGGED_IN, 'ident': fb_username})
     return User({'type': ANONYMOUS, 'ident': ip_addr})
@@ -119,29 +123,39 @@ def get_user_from(req):
 def get_winner():
     ''' returns the Picture obj of the winner '''
     global Cache
-    winner_id = Cache.find_one(query={'name': 'winner_id'}).get(ID)
+    global Pictures
+    try:
+        winner_id = Cache.find_one({'name': 'winner_id'}).get(ID)
+    except AttributeError:
+        winner_id = get_random_object(Pictures, {}).get(ID)
     return get_picture_from(winner_id)
 
 
 def get_picture_from(pic_id):
     ''' return a Picture obj from `pic_id` '''
     global Pictures
-    return Pictures.find_one(query={ID: pic_id})
+    return demongo(Pictures.find_one({ID: pic_id}))
 
 
-def create_picture_from(url, x, y, width, height, auto=True):
+def create_picture_from(url, facebook_id, x, y, width, height, auto=False):
     global Pictures
-    doc = {ID: uuid.uuid4().hex(),
-           'type': GENERATED,
+    global RawPictures
+    raw = RawPictures.find_one({'facebook_id': facebook_id})
+    pic_id = uuid.uuid4().hex
+    doc = {ID: pic_id,
            'url': url,
            'face_x': x,
            'face_y': y,
            'face_width': width,
            'face_height': height,
+           'source_width': raw.get('width'),
+           'source_height': raw.get('height'),
+           'facebook_id': facebook_id,
            'random': random.random(),
            'auto': auto,
            }
-    return Pictures.insert(doc)
+    Pictures.insert(doc)
+    return get_picture_from(pic_id)
 
 
 def create_raw_from_url(url):
@@ -182,24 +196,19 @@ def get_random_object(collection, query):
     rand = random.random()
     querya = copy.deepcopy(query)
     querya.update({'random': {'$gte': rand}})
-    result = collection.find_one(query=query)
+    result = collection.find_one(querya)
     if not result:
         queryb = copy.deepcopy(query)
         queryb.update({'random': {'$lte': rand}})
-        result = collection.find_one(query=query)
-    return result
+        result = collection.find_one(queryb)
+    return demongo(result)
 
 
 def get_random_pictures(limit=2, valid=True):
     global Pictures
-    if valid:
-        query = {'type': ACCEPTED}
-    else:
-        query = {}
     picture_list = []
     for _ in xrange(limit):
-        picture_list.append(get_random_object(Pictures, query))
-
+        picture_list.append(get_random_object(Pictures, {}))
     return picture_list
 
 
@@ -214,7 +223,7 @@ def votes_for_user(user, day=None):
         eod = datetime(day.year, day.month, day.day, 23, 59, 59)
         query.update({'datetime': {'$gte': sod.isoformat(),
                                    '$lt': eod.isoformat()}})
-    return Votes.count(query=query)
+    return Votes.find(query).count()
 
 
 def get_remaining_votes(user):
@@ -230,9 +239,9 @@ def maybe_update_winner(pic_id):
         Returns whether it did update (bool) '''
     global Votes
     global Cache
-    nb_votes = Votes.count(query={ID: pic_id})
-    winner = Cache.find_one(query={'name': 'winner_id'})
-    nb_votes_winner = Votes.count(query={ID: winner.get(ID)})
+    nb_votes = Votes.count({ID: pic_id})
+    winner = Cache.find_one({'name': 'winner_id'})
+    nb_votes_winner = Votes.count({ID: winner.get(ID)})
     if nb_votes > nb_votes_winner:
         winner.update({ID: pic_id})
         Cache.save(winner)
@@ -266,3 +275,9 @@ def can_vote(user):
     nb_max = MAX_VOTES_LOGGED_IN if user.type == LOGGED_IN \
         else MAX_VOTES_ANONYMOUS
     return nb_votes < nb_max
+
+
+def votes_for(pic_id):
+    ''' Number of Votes for a particular Picture '''
+    global Votes
+    return Votes.find({ID: pic_id}).count()

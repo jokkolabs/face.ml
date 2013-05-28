@@ -7,6 +7,7 @@
 <title>Face.ml</title>
 <link href="/static/css/bootstrap.min.css" rel="stylesheet">
 <link href="/static/css/bootstrap-responsive.min.css" rel="stylesheet">
+<link href="/static/css/face.css" rel="stylesheet">
 </head>
 <body>
 <div class="container">
@@ -16,7 +17,7 @@
 	<div class"row-fluid">
 		<div id="winner" class="span3 offset9">
 			<h1>Winner</h1>
-			<img src="/static/img/unknown.png" />
+			<div id="winner_pic"><img src="/static/img/unknown.png" /></div>
 			<h3>Nb votes: <span id="nbvotewinner">?</span></h3>
 		</div>
 	</div>
@@ -25,12 +26,12 @@
 	</div>
 	<div class"row-fluid">
 		<div id="voteleft" class="span3">
-			<img id="imgleft" src="/static/img/unknown.png" />
+			<div id="left_pic"><img src="/static/img/unknown.png" /></div>
 			<button id="btnleft">Vote !!</button>
 			<h3>Nb votes: <span id="nbvoteleft">?</span></h3>
 		</div>
 		<div id="voteleft" class="span3">
-			<img id="imgright" src="/static/img/unknown.png" />
+			<div id="right_pic"><img src="/static/img/unknown.png" /></div>
 			<button id="btnright">Vote !!</button>
 			<h3>Nb votes: <span id="nbvoteright">?</span></h3>
 		</div>
