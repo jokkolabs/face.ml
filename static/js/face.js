@@ -275,5 +275,14 @@ function startupLoadStep2() {
                 pageReload();
             });
         });
+
+        $("button[action-type='delete']").click(function () {
+            console.log("clicked badButton");
+            var url = '/detach_raw_picture';
+            $.post(url, {'facebook_ids': [facebook_id]}).done(function (response){
+                console.log("detached picture "+response);
+                pageReload();
+            });
+        });
     });
 }
