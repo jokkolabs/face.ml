@@ -9,7 +9,7 @@ from flask import Flask
 from api import (crawl_user_wall, vote, refresh, unknown_pictures_list,
                  confirm_raw_picture, detach_raw_picture,
                  raw_picture_for_facing, add_single_face,
-                 complete_raw_picture)
+                 complete_raw_picture, detach_face)
 
 # app = Flask('face_server')
 # app.debug = True
@@ -37,6 +37,7 @@ app.route('/all_unknown')(unknown_pictures_list)
 app.route('/picture_facing')(raw_picture_for_facing)
 app.route('/confirm_raw_picture', methods=['POST'])(confirm_raw_picture)
 app.route('/detach_raw_picture', methods=['POST'])(detach_raw_picture)
+app.route('/detach_face', methods=['POST'])(detach_face)
 app.route('/add_single_face', methods=['POST'])(add_single_face)
 app.route('/complete_raw_picture', methods=['POST'])(complete_raw_picture)
 

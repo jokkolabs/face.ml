@@ -284,5 +284,16 @@ function startupLoadStep2() {
                 pageReload();
             });
         });
+
+        $("button[action-type='delete-face']").click(function () {
+            console.log("clicked badButton face");
+            var url = '/detach_face';
+            var picture_id = $(this).attr('picture_id');
+
+            $.post(url, {'picture_id': picture_id}).done(function (response){
+                console.log("detached picture "+response);
+                pageReload();
+            });
+        });
     });
 }

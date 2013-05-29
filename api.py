@@ -129,6 +129,16 @@ def detach_raw_picture():
     return success_response()
 
 
+def detach_face():
+    picture_id = request.form.get('picture_id')
+    if not picture_id:
+        return error_response(u"`picture_id` not found")
+
+    print("DELETING %s" % picture_id)
+    Pictures.remove({'picture_id': picture_id})
+    return success_response()
+
+
 def complete_raw_picture():
     ''' Moves a RawPicture from FACE_PICTURE to FACE_DONE '''
     facebook_id = request.form.get('facebook_id')
