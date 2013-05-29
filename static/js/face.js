@@ -133,6 +133,7 @@ function startupLoadStep1() {
                 var url = '/confirm_raw_picture';
                 var img = $("img#img_"+facebook_id);
                 img.attr('status', 'confirmed');
+                img.attr('class', "confirmed");
                 var params = {'facebook_id': facebook_id}
                 params['picture_width'] = img[0].naturalWidth;
                 params['picture_height'] = img[0].naturalHeight;
@@ -149,6 +150,7 @@ function startupLoadStep1() {
             $(badButton).click(function () {
                 console.log("clicked badButton");
                 var url = '/detach_raw_picture';
+                img.attr('class', "badpicture");
                 $.post(url, {'facebook_ids': [facebook_id]}).done(function (response){
                     console.log("detached picture "+response);
                 });
