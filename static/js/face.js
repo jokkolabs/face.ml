@@ -1,23 +1,25 @@
 var fb_username = '';
 var ias;
-var FACE_SIZE = 200;
+var DEFAULT_FACE_SIZE = 200;
 
 
 function pageReload() {
     window.location.reload(true);
 }
 
-function createFaceImg(picture) {
-    var new_width = Math.floor(picture.source_width * FACE_SIZE / picture.face_width);
-    var new_height = Math.floor(picture.source_height * FACE_SIZE / picture.face_height);
+function createFaceImg(picture, face_size) {
+    if (face_size === null || face_size === undefined)
+        face_size = DEFAULT_FACE_SIZE;
+    var new_width = Math.floor(picture.source_width * face_size / picture.face_width);
+    var new_height = Math.floor(picture.source_height * face_size / picture.face_height);
     var margin_left = -Math.floor(new_width * picture.face_x / picture.source_width);
     var margin_top = -Math.floor(new_height * picture.face_y / picture.source_height);
 
     var imgDiv = $("<div />");
     imgDiv.attr('picture_id', picture.picture_id);
     imgDiv.attr('class', 'facecontainer');
-    imgDiv.css('width', FACE_SIZE);
-    imgDiv.css('height', FACE_SIZE);
+    imgDiv.css('width', face_size);
+    imgDiv.css('height', face_size);
 
     var img = $('<img />');
     img.attr('picture_id', picture.picture_id);
@@ -73,7 +75,7 @@ function facebook_login_callback(response) {
 function refresh() {
 	$.get('/refresh', {'fb_username': fb_username}, function(response) {
 		console.log(response);
-        $("#winner_pic").html(createFaceImg(response.data.winner));
+        $("#winner_pic").html(createFaceImg(response.data.winner, 250));
         $("#left_pic").html(createFaceImg(response.data.left));
         $("#right_pic").html(createFaceImg(response.data.right));
         $("#nbvoteright").html(response.data.right.nb_votes);

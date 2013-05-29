@@ -7,3 +7,7 @@ div.facecontainer {
 div.facecontainer  img {
     max-width : none;
 }
+
+#winner .facecontainer {
+    border: 10px solid #666666;
+}
