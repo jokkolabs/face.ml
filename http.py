@@ -9,7 +9,7 @@ from flask import Flask
 from api import (crawl_user_wall, vote, refresh, unknown_pictures_list,
                  confirm_raw_picture, detach_raw_picture,
                  raw_picture_for_facing, add_single_face,
-                 complete_raw_picture, detach_face)
+                 complete_raw_picture, detach_face, pictures_for_gallery)
 
 # app = Flask('face_server')
 # app.debug = True
@@ -26,6 +26,11 @@ def root():
     return open('face.html', 'r').read()
 
 
+@app.route('/gallery')
+def gallery():
+    return open('gallery.html', 'r').read()
+
+
 @app.route('/imam')
 def imam():
     return open('imam.html', 'r').read()
@@ -40,6 +45,9 @@ app.route('/detach_raw_picture', methods=['POST'])(detach_raw_picture)
 app.route('/detach_face', methods=['POST'])(detach_face)
 app.route('/add_single_face', methods=['POST'])(add_single_face)
 app.route('/complete_raw_picture', methods=['POST'])(complete_raw_picture)
+app.route('/pictures_for_gallery')(pictures_for_gallery)
+app.route('/gallery')(gallery)
+
 
 if __name__ == '__main__':
     try:

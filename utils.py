@@ -186,8 +186,10 @@ def create_raw_from_url(url):
         return False
 
     try:
-        return RawPictures.insert({'url': url, 'type': UNKNOWN,
-                                   'facebook_id': facebook_id})
+        x = RawPictures.insert({'url': url, 'type': UNKNOWN,
+                                'facebook_id': facebook_id})
+        print('Accepted URL: %s' % url)
+        return x
     except DuplicateKeyError:
         return False
 

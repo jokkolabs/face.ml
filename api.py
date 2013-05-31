@@ -12,6 +12,7 @@ from utils import (success_response, error_response,
                    RawPictures, Pictures,
                    create_picture_from, votes_for, ID)
 from facebook_utils import get_data_from_fql, find_jpeg_in_album
+from tasks import execute_facebook_crawl
 
 
 def vote():
@@ -69,12 +70,7 @@ def crawl_user_wall():
         return error_response(u"No TOKEN!", silent=True)
     print('Received TOKEN: %s' % token)
 
-    query = ("SELECT attachment FROM stream WHERE filter_key='others' "
-             "OR filter_key='owner'")
-    wall_data = get_data_from_fql(query, token)
-
-    find_jpeg_in_album(data=wall_data, token=token,
-                       callback=create_raw_from_url)
+    execute_facebook_crawl.apply_async([token])
 
     return success_response()
 
@@ -185,3 +181,18 @@ def add_single_face():
     picture = create_picture_from(raw_picture.get('url'),
                                   facebook_id, x, y, width, height)
     return success_response(demongo(picture))
+
+
+# def gallery():
+#     context = {"category": 'gallery'}
+
+#     id_best = Best_imag.find_one().get('best')
+#     best = Pictures.find_one({"_id": id_best})
+#     context.update({"star": best})
+#     return render_template('gallery.html', **context)
+
+
+def pictures_for_gallery(*args, **kwargs):
+    ''' JSON list of pictures for gallery '''
+    pictures = Pictures.find(fields=['url', 'facebook_id'],)
+    return success_response(data=demongo_cursor(pictures))

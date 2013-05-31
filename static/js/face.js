@@ -207,24 +207,31 @@ function startupLoadStep2() {
 
         var btnline = $(line_tmpl);
         var addButton = $("<button />");
-        addButton.attr('class', 'span4');
+        addButton.attr('class', 'span3');
         addButton.html("AJOUTER FACE");
         addButton.attr('action-type', 'add-face');
         addButton.attr('facebook_id', facebook_id);
 
+        var adddoneButton = $("<button />");
+        adddoneButton.attr('class', 'span3');
+        adddoneButton.html("AJOUTER ET TERMINER");
+        adddoneButton.attr('action-type', 'add-done');
+        adddoneButton.attr('facebook_id', facebook_id);
+
         var doneButton = $("<button />");
-        doneButton.attr('class', 'span4');
+        doneButton.attr('class', 'span3');
         doneButton.html("TERMINER");
         doneButton.attr('action-type', 'done');
         doneButton.attr('facebook_id', facebook_id);
 
         var badButton = $("<button />");
-        badButton.attr('class', 'span4');
+        badButton.attr('class', 'span3');
         badButton.html("SUPPRIMER PHOTO");
         badButton.attr('action-type', 'delete');
         badButton.attr('facebook_id', facebook_id);
         btnline.append(addButton);
         btnline.append(doneButton);
+        btnline.append(adddoneButton);
         btnline.append(badButton);
         container.append(btnline);
 
@@ -255,10 +262,6 @@ function startupLoadStep2() {
             var width = selection.x2 - selection.x1;
             var height = selection.y2 - selection.y1;
             console.log("Add Face !");
-            console.log(x);
-            console.log(y);
-            console.log(width);
-            console.log(height);
             $.post('/add_single_face', {facebook_id: facebook_id,
                                         face_x: x,
                                         face_y: y,
@@ -275,6 +278,26 @@ function startupLoadStep2() {
             $.post('/complete_raw_picture', {facebook_id: facebook_id}).done(function (response) {
                 console.log("Completed raw picture !!");
                 pageReload();
+            });
+        });
+
+        $("button[action-type='add-done']").click(function () {
+            console.log("click add and done");
+            var selection = ias.getSelection();
+            var width = selection.x2 - selection.x1;
+            var height = selection.y2 - selection.y1;
+            console.log("Add Face !");
+            $.post('/add_single_face', {facebook_id: facebook_id,
+                                        face_x: selection.x1,
+                                        face_y: selection.y1,
+                                        face_width: width,
+                                        face_height: height}).done(function (response) {
+            $.post('/complete_raw_picture', {facebook_id: facebook_id}).done(function (response) {
+                console.log("Completed raw picture !!");
+                pageReload();
+            });
+                console.log("Added face !!");
+                console.log(response.data);
             });
         });
 
@@ -296,6 +319,32 @@ function startupLoadStep2() {
                 console.log("detached picture "+response);
                 pageReload();
             });
+        });
+    });
+}
+
+
+function gallery(){
+    var nb_per_line = 6;
+    var container = $(".container");
+    var line_tmpl = "<div class='row-fluid' />";
+    var line;
+    console.log("gallery");
+    $.getJSON('/pictures_for_gallery').done(function (response){
+        console.log("pictures for gallery " + response);
+        $.each(response.data, function (idx, picture) {
+            var facebook_id = picture.facebook_id;
+            var faceimg = createFaceImg(picture);
+            console.log(idx);
+            console.log(picture.url);
+
+            var imgdiv = $("<div />");
+            imgdiv.attr('class', 'span' + 12/nb_per_line);
+            if (idx % nb_per_line === 0) {
+                imgdiv.append(faceimg);
+                faceimg = $(line_tmpl);
+            }
+            container.append(imgdiv);
         });
     });
 }

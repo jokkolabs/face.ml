@@ -39,13 +39,14 @@ def find_jpeg_in(data, callback):
 
 
 def find_jpeg_in_album(data, token, callback):
+    print("called find_jpeg_in_album")
 
     def add_url(url):
-        print('FOUND URL: %s' % url)
         callback(url)
 
     def request_album_pics(aid):
-        query = "select src_big from photo where aid='%s'" % aid
+        print("AID %s" % aid)
+        query = "select src_big from photo where aid='%s' LIMIT 5000" % aid
         find_jpeg_in_album(data=get_data_from_fql(query, token),
                            token=token, callback=callback)
 
