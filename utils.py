@@ -91,7 +91,7 @@ def demongo(obj):
     nobj = copy.deepcopy(obj)
     try:
         del nobj['_id']
-    except KeyError:
+    except (KeyError, TypeError):
         pass
     return nobj
 

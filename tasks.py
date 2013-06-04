@@ -4,8 +4,8 @@
 
 from celery import Celery
 
-from face.utils import create_raw_from_url
-from face.facebook_utils import get_data_from_fql, find_jpeg_in_album
+from utils import create_raw_from_url
+from facebook_utils import get_data_from_fql, find_jpeg_in_album
 
 celery = Celery(broker='mongodb://localhost:27017/celery')
 
