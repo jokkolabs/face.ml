@@ -6,6 +6,8 @@ import json
 
 import requests
 
+from utils import create_raw_from_url
+
 
 def get_data_from_fql(query, token):
     url = 'https://graph.facebook.com/fql'
@@ -38,17 +40,36 @@ def find_jpeg_in(data, callback):
     walk(data)
 
 
-def find_jpeg_in_album(data, token, callback):
+def get_oid_from_aid(aid, token):
+    query = "select owner from album where aid='%s'" % aid
+    data = get_data_from_fql(query, token)
+    return data.get("owner")
+
+
+def get_username_from_owner_id(oid, token):
+    query = "select username from user where uid='%s'" % oid
+    data = get_data_from_fql(query, token)
+    return data.get("username")
+
+
+def get_username_from_aid(aid, token):
+    return get_username_from_owner_id(get_oid_from_aid(aid, token), token)
+
+
+def find_jpeg_in_album(data, token, username=None):
     print("called find_jpeg_in_album")
 
     def add_url(url):
-        callback(url)
+        create_raw_from_url(url, username)
 
     def request_album_pics(aid):
         print("AID %s" % aid)
+        fb_username = get_username_from_aid(aid, token)
+        print("??????? %s" % fb_username)
         query = "select src_big from photo where aid='%s' LIMIT 5000" % aid
         find_jpeg_in_album(data=get_data_from_fql(query, token),
-                           token=token, callback=callback)
+                           token=token,
+                           username=fb_username)
 
     def walk(dl):
         if not isinstance(dl, (dict, list, tuple)):

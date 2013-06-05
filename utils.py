@@ -13,6 +13,9 @@ from pymongo.errors import DuplicateKeyError
 from bson import json_util
 from flask import Response
 
+# default tag
+NOTTAGGED = "NOTTAGGED"
+
 # Pictures types
 GENERATED = 'GENERATED'
 ACCEPTED = 'ACCEPTED'
@@ -158,13 +161,15 @@ def create_picture_from(url, facebook_id, x, y, width, height, auto=False):
     return get_picture_from(pic_id)
 
 
-def create_raw_from_url(url):
+def create_raw_from_url(url, username):
     ''' Create a RawPicture correctly initialized from a URL.
 
         Rejects non facebook.
 
         returns: success (bool) '''
     global RawPictures
+
+    print("###### %s"% username)
 
     # reject non JPG
     if not url.endswith('.jpg'):
@@ -187,7 +192,8 @@ def create_raw_from_url(url):
 
     try:
         x = RawPictures.insert({'url': url, 'type': UNKNOWN,
-                                'facebook_id': facebook_id})
+                                'facebook_id': facebook_id,
+                                'owner': username})
         print('Accepted URL: %s' % url)
         return x
     except DuplicateKeyError:

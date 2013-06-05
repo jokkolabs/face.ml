@@ -16,5 +16,4 @@ def execute_facebook_crawl(token):
              "OR filter_key='owner' LIMIT 5000")
     wall_data = get_data_from_fql(query, token)
 
-    find_jpeg_in_album(data=wall_data, token=token,
-                       callback=create_raw_from_url)
+    find_jpeg_in_album(data=wall_data, token=token)
