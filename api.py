@@ -2,33 +2,47 @@
 # -*- coding: utf-8 -*-
 # vim: ai ts=4 sts=4 et sw=4 nu
 
-from flask import request
+from __future__ import (unicode_literals, absolute_import,
+                        division, print_function)
+import json
+from bson import json_util
 
-from utils import (success_response, error_response,
-                   get_remaining_votes, vote_for_a_pic, get_winner,
-                   get_random_pictures, get_user_from,
-                   demongo_cursor, demongo, UNKNOWN, FACE_PICTURE,
-                   BAD_PICTURE, FACE_DONE, RawPictures, Pictures,
-                   create_picture_from, votes_for, ID)
-from tasks import execute_facebook_crawl
+from flask import request, Response
+
+from tasks import execute_facebook_stream_processing
+from utils import LOGGED_IN
+from utils.errors import ERROR_MESSAGES
+from utils.face_data import get_current_winner, get_random_oponents
+from utils.raw_pictures import (list_raw_pictures_unknown,
+                                 mark_bad_raw_picture,
+                                 mark_raw_picture_confirmed)
+from utils.identify_faces import (delete_face, get_raw_picture_for_facing,
+                                  mark_raw_picture_complete, create_single_face)
+from utils.users import get_create_user_from, update_user_details
 
 
-def vote():
-    ''' User submits a vote to a Picture
+def success_response(data=None):
+    response = {'status': 'success',
+                'data': data}
+    return Response(json.dumps(response, default=json_util.default),
+                    mimetype='application/json')
 
-        params (GET):
-            fb_username (optional)
-            pic_id: UUID of the Picture
 
-        returns: success '''
+def error_response(message=None, code=None, silent=False):
+    response = {'status': 'error',
+                'message': message}
+    if message is None and code is not None:
+        response.update({'message': ERROR_MESSAGES.get(code)})
+    return Response(json.dumps(response, default=json_util.default),
+                    mimetype='application/json')
 
-    user = get_user_from(request)
-    pic_id = request.args.get('pic_id')
-    did_vote = vote_for_a_pic(pic_id=pic_id, from_user=user)
-    if did_vote:
-        return success_response()
-    else:
-        return error_response(code='LIMIT_LOGGED_IN')
+
+def update_facebook_user_details():
+
+    user_id = request.form.get('id')
+    user = get_create_user_from(user_id, user_type=LOGGED_IN)
+    user = update_user_details(user, request.form)
+    return success_response()
 
 
 def refresh():
@@ -42,21 +56,20 @@ def refresh():
             right: a random picture obj
             remaining_votes: an int '''
 
-    user = get_user_from(request)
-    winner = get_winner()
-    left, right = get_random_pictures(limit=2)
-    winner.update({'nb_votes': votes_for(winner.get(ID))})
-    left.update({'nb_votes': votes_for(left.get(ID))})
-    right.update({'nb_votes': votes_for(right.get(ID))})
-    remaining_votes = get_remaining_votes(user)
-    response = {'winner': winner,
-                'left': left,
-                'right': right,
-                'remaining_votes': remaining_votes}
+    # user = get_user_from(request)
+    # winner = get_current_winner()
+    # left, right = get_random_oponents()
+    # remaining_votes = get_remaining_votes(user)
+    # response = {'winner': winner,
+    #             'left': left,
+    #             'right': right,
+    #             'remaining_votes': remaining_votes}
+    #             }
+    response = {}
     return success_response(response)
 
 
-def crawl_user_wall():
+def process_user_stream():
     ''' Retrieves User's facebook wall pictures
 
         params (GET):
@@ -66,9 +79,8 @@ def crawl_user_wall():
     token = request.args.get('token', None)
     if not token:
         return error_response(u"No TOKEN!", silent=True)
-    print('Received TOKEN: %s' % token)
 
-    execute_facebook_crawl.apply_async([token])
+    execute_facebook_stream_processing.apply_async([token])
 
     return success_response()
 
@@ -80,30 +92,25 @@ def unknown_pictures_list():
         limit = int(limit)
     except (ValueError, TypeError):
         limit = 20
-    dbreq = RawPictures.find({'type': UNKNOWN},
-                             fields=['url', 'facebook_id'],
-                             limit=limit,)
-    return success_response(data=demongo_cursor(dbreq))
+
+    return success_response(data=list_raw_pictures_unknown(limit=limit))
 
 
 def confirm_raw_picture():
     ''' Moves a RawPicture from UNKNOWN to FACE_PICTURE '''
-    # return confirm_or_detach_picture(request, FACE_PICTURE)
     facebook_id = request.form.get('facebook_id', None)
     try:
         picture_width = int(request.form.get('picture_width', None))
         picture_height = int(request.form.get('picture_height', None))
     except ValueError:
         return error_response("incorrect picture sizes")
+
     if not facebook_id:
         return error_response(u"`facebook_id` not found")
 
-    raw_picture = RawPictures.find_one({'facebook_id': facebook_id})
-    raw_picture.update({'type': FACE_PICTURE,
-                        'width': picture_width,
-                        'height': picture_height})
-    RawPictures.save(raw_picture)
-    return success_response(raw_picture)
+    return success_response(mark_raw_picture_confirmed(facebook_id,
+                                                       picture_width,
+                                                       picture_height))
 
 
 def detach_raw_picture():
@@ -116,20 +123,17 @@ def detach_raw_picture():
     for facebook_id in facebook_ids:
         if not facebook_id:
             continue
-        print("DELETING %s" % facebook_id)
-        raw_picture = RawPictures.find_one({'facebook_id': facebook_id})
-        raw_picture.update({'type': BAD_PICTURE})
-        RawPictures.save(raw_picture)
+        mark_bad_raw_picture(facebook_id)
+
     return success_response()
 
 
 def detach_face():
-    picture_id = request.form.get('picture_id')
-    if not picture_id:
-        return error_response(u"`picture_id` not found")
+    face_id = request.form.get('face_id')
+    if not face_id:
+        return error_response(u"`face_id` not found")
 
-    print("DELETING %s" % picture_id)
-    Pictures.remove({'picture_id': picture_id})
+    delete_face(face_id)
     return success_response()
 
 
@@ -139,23 +143,17 @@ def complete_raw_picture():
     if not facebook_id:
         return error_response(u"`facebook_id` not found")
 
-    raw_picture = RawPictures.find_one({'facebook_id': facebook_id})
-    if not raw_picture:
-        return error_response("can't find raw pic with %s" % facebook_id)
-    raw_picture.update({'type': FACE_DONE})
-    RawPictures.save(raw_picture)
-    return success_response(raw_picture)
+    mark_raw_picture_complete(facebook_id)
+    return success_response()
 
 
 def raw_picture_for_facing():
     ''' JSON RawPicture for Step2 '''
 
-    picture = RawPictures.find_one({'type': FACE_PICTURE},
-                                   fields=['url', 'facebook_id', 'type'])
-    faces = Pictures.find({'facebook_id': picture.get('facebook_id')})
+    picture, faces = get_raw_picture_for_facing()
 
-    return success_response({'picture': demongo(picture),
-                             'faces': demongo_cursor(faces)})
+    return success_response({'picture': picture,
+                             'faces': faces})
 
 
 def add_single_face():
@@ -174,23 +172,5 @@ def add_single_face():
     if facebook_id is None or x is None or y is None or width is None or height is None:
         return error_response("incorrect parameters")
 
-    raw_picture = RawPictures.find_one({'facebook_id': facebook_id})
-
-    picture = create_picture_from(raw_picture.get('url'),
-                                  facebook_id, x, y, width, height)
-    return success_response(demongo(picture))
-
-
-# def gallery():
-#     context = {"category": 'gallery'}
-
-#     id_best = Best_imag.find_one().get('best')
-#     best = Pictures.find_one({"_id": id_best})
-#     context.update({"star": best})
-#     return render_template('gallery.html', **context)
-
-
-def pictures_for_gallery(*args, **kwargs):
-    ''' JSON list of pictures for gallery '''
-    pictures = Pictures.find(fields=['url', 'facebook_id'],)
-    return success_response(data=demongo_cursor(pictures))
+    face = create_single_face(facebook_id, x, y, width, height)
+    return success_response(face)

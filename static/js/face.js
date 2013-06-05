@@ -1,4 +1,4 @@
-var fb_username = '';
+var fb_user_id = '';
 var ias;
 var DEFAULT_FACE_SIZE = 200;
 
@@ -49,7 +49,7 @@ function getParameterByName( name, href )
 
 
 function load_startup_data() {
-	console.log('load_startup_data');
+	// launch on first display of Home Page
     refresh();
 }
 
@@ -63,8 +63,11 @@ function facebook_login_callback(response) {
 
 		FB.api('/me', function(response) {
 			console.log('Good to see you, ' + response.first_name + '.');
-			fb_username = response.username;
-			refresh();
+			console.log(response);
+			fb_user_id = response.id;
+			$.post('/fbupdate', response).done(function (resp) {
+				refresh();
+			});
 		});
 	} else {
 		console.log('User cancelled login or did not fully authorize.');
@@ -73,8 +76,8 @@ function facebook_login_callback(response) {
 
 
 function refresh() {
-	$.get('/refresh', {'fb_username': fb_username}, function(response) {
-		console.log(response);
+	$.get('/refresh', {'fb_user_id': fb_user_id}, function(response) {
+		console.log("refreshed: " + response);
         $("#winner_pic").html(createFaceImg(response.data.winner, 250));
         $("#left_pic").html(createFaceImg(response.data.left));
         $("#right_pic").html(createFaceImg(response.data.right));
@@ -88,7 +91,6 @@ function refresh() {
 function setUpMainPageEvents() {
 	console.log('setUpMainPageEvents');
 	$(".fblogin").click(function () {
-		console.log('clicked!');
 		FB.login(facebook_login_callback, {scope: 'read_stream'});
 	});
 }
@@ -96,9 +98,10 @@ function setUpMainPageEvents() {
 
 function startupLoadStep1() {
 	console.log("startupLoadStep1");
-	var limit = 30;
-	var nb_per_line = 3;
+	var limit = 60;
+	var nb_per_line = 6;
 	var container = $(".container");
+	var bin = $(".bin");
 	var line_tmpl = "<div class='row-fluid' />";
 	var line;
     var btnLine;
@@ -106,9 +109,6 @@ function startupLoadStep1() {
 		console.log("all_unknown received");
 		$.each(response.data, function (idx, picture) {
             var facebook_id = picture.facebook_id;
-			// console.log(idx);
-			// console.log(picture.url);
-			// console.log(facebook_id);
 			if (idx % nb_per_line === 0) {
                 container.append(line);
 				container.append(btnLine);
@@ -120,12 +120,13 @@ function startupLoadStep1() {
 			imgdiv.attr('class', 'span' + 12/nb_per_line);
 			var img = $("<img />");
             img.attr('status', 'unknown');
-			img.attr('src', picture.url);
+			img.attr('src', picture.url_thumbnail);
+			img.attr('origurl', picture.url);
             img.attr('id', 'img_' + facebook_id);
 			img.attr('facebook_id', facebook_id);
 			var okButton = $("<button />");
             okButton.attr('class', 'span' + 12/nb_per_line/2);
-			okButton.html("CONFIRMER");
+			okButton.html("CONF");
 			okButton.attr('action-type', 'confirm');
 			okButton.attr('facebook_id', facebook_id);
             $(okButton).click(function () {
@@ -134,17 +135,23 @@ function startupLoadStep1() {
                 var img = $("img#img_"+facebook_id);
                 img.attr('status', 'confirmed');
                 img.attr('class', "confirmed");
-                var params = {'facebook_id': facebook_id}
-                params['picture_width'] = img[0].naturalWidth;
-                params['picture_height'] = img[0].naturalHeight;
-                $.post(url, params).done(function (response){
-                    console.log("confirmed picture "+ response.data.url);
+                var imgOrig = $("<img />");
+                imgOrig.attr('class', 'notdisplayed');
+                imgOrig.attr('src', img.attr('origurl'));
+                // bin.append(imgOrig);
+                imgOrig.load(function () {
+					var params = {'facebook_id': facebook_id};
+					params['picture_width'] = $(this)[0].naturalWidth;
+					params['picture_height'] = $(this)[0].naturalHeight;
+					$.post(url, params).done(function (response){
+						console.log("confirmed picture "+ response.data.url);
+					});
                 });
             });
 
 			var badButton = $("<button />");
             badButton.attr('class', 'span' + 12/nb_per_line/2);
-			badButton.html("SUPPRIMER");
+			badButton.html("SUPP");
 			badButton.attr('action-type', 'delete');
 			badButton.attr('facebook_id', facebook_id);
             $(badButton).click(function () {
