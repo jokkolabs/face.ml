@@ -5,8 +5,29 @@
 from __future__ import (unicode_literals, absolute_import,
                         division, print_function)
 
-from utils import LOGGED_IN
-from utils.database import Users
+from utils import LOGGED_IN, NB_MAX_FAVORITES, now, _FACE_ID
+from utils.database import Users, Favorites
+from utils.sessions import user_ident_from_session
+from utils.face_data import update_face, get_face_from
+
+
+def user_from_request(req):
+    session_id = req.args.get('session_id', None)
+    if not session_id:
+        session_id = req.form.get('session_id', None)
+
+    if session_id:
+        user_id, user_type = user_ident_from_session(str(session_id))
+        # session expired
+        if not user_id:
+            return None
+        return get_create_user_from(user_id=user_id, user_type=user_type)
+    return None
+
+
+def user_from_user_id(user_id):
+    global Users
+    return Users.find_one({'ident': user_id})
 
 
 def get_create_user_from(user_id, user_type=LOGGED_IN):
@@ -27,3 +48,33 @@ def update_user_details(user, data):
     user.update(fb_data)
     Users.save(user)
     return user
+
+
+def favorites_ids_for_user(user):
+    global Favorites
+    return Favorites.find({'user_id': user.get('ident')})
+
+
+def create_favorite_for(user, face_id):
+    global Favorites
+    global Users
+
+    print("my favs: %s" % user.get('favorites', []))
+    if face_id in user.get('favorites', []):
+        return False
+
+    if user.get('nb_favorited') >= NB_MAX_FAVORITES:
+        return False
+
+    # create favorite object
+    Favorites.insert({_FACE_ID: face_id,
+                      'user_id': user.get('ident'),
+                      'datetime': now()})
+
+    # update facepicture counter for favorites
+    face = get_face_from(face_id, raw=True)
+    update_face(face, {'nb_favorited': face.get('nb_favorited', 0) + 1})
+
+    # update user counter + list of favs
+    user.update({'favorites': user.get('favorites', []) + [face_id, ]})
+    Users.save(user)

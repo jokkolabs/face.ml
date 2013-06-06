@@ -5,12 +5,14 @@
 from __future__ import (unicode_literals, absolute_import,
                         division, print_function)
 import json
-from bson import json_util
 
+from bson import json_util
+from bson.json_util import dumps
+import pymongo
 from flask import request, Response
 
 from tasks import execute_facebook_stream_processing
-from utils import LOGGED_IN
+from utils import LOGGED_IN, TAGS
 from utils.errors import ERROR_MESSAGES
 from utils.face_data import get_current_winner, get_random_oponents
 from utils.raw_pictures import (list_raw_pictures_unknown,
@@ -18,23 +20,42 @@ from utils.raw_pictures import (list_raw_pictures_unknown,
                                  mark_raw_picture_confirmed)
 from utils.identify_faces import (delete_face, get_raw_picture_for_facing,
                                   mark_raw_picture_complete, create_single_face)
-from utils.users import get_create_user_from, update_user_details
+from utils.users import get_create_user_from, update_user_details, favorites_ids_for_user, user_from_request, create_favorite_for
+from utils.sessions import create_anonymous_session
+
+
+def require_user(target_func):
+
+    def wrapper():
+        user = user_from_request(request)
+        if user:
+            return target_func(user)
+        else:
+            return error_response("Session has expired")
+    # hack for Flask's app.route decorator
+    wrapper.__name__ = target_func.__name__
+    return wrapper
 
 
 def success_response(data=None):
     response = {'status': 'success',
                 'data': data}
-    return Response(json.dumps(response, default=json_util.default),
+    return Response(dumps(response, default=json_util.default),
                     mimetype='application/json')
 
 
 def error_response(message=None, code=None, silent=False):
     response = {'status': 'error',
-                'message': message}
+                'message': message,
+                'data': None}
     if message is None and code is not None:
         response.update({'message': ERROR_MESSAGES.get(code)})
-    return Response(json.dumps(response, default=json_util.default),
+    return Response(dumps(response, default=json_util.default),
                     mimetype='application/json')
+
+
+def get_anonymous_session():
+    return success_response({'session_id': create_anonymous_session(request)})
 
 
 def update_facebook_user_details():
@@ -45,7 +66,8 @@ def update_facebook_user_details():
     return success_response()
 
 
-def refresh():
+@require_user
+def refresh(user):
     ''' returns the main page information refreshed
 
         params (GET): none
@@ -56,16 +78,22 @@ def refresh():
             right: a random picture obj
             remaining_votes: an int '''
 
-    # user = get_user_from(request)
+    # user = get_create_user_from(request)
+    favorites = user.get('favorites', [])
+
     # winner = get_current_winner()
-    # left, right = get_random_oponents()
+    left, right = get_random_oponents(update_views=True)
+
     # remaining_votes = get_remaining_votes(user)
     # response = {'winner': winner,
     #             'left': left,
     #             'right': right,
     #             'remaining_votes': remaining_votes}
     #             }
-    response = {}
+    response = {'left': left,
+                'right': right,
+                'favorites': favorites,
+                'all_tags': TAGS}
     return success_response(response)
 
 
@@ -174,3 +202,12 @@ def add_single_face():
 
     face = create_single_face(facebook_id, x, y, width, height)
     return success_response(face)
+
+
+@require_user
+def add_face_to_favorite(user):
+    face_id = request.form.get('face_id', None)
+    if not face_id:
+        return error_response("No face_id to fav.")
+
+    return success_response(create_favorite_for(user, face_id))

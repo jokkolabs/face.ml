@@ -12,20 +12,20 @@ mongo_client = MongoClient('localhost', 27017)
 db = mongo_client["face_db2"]
 
 
-def demongo(obj):
-    ''' removes `_id` key from a mongo object
+# def demongo(obj):
+#     ''' removes `_id` key from a mongo object
 
-        Saves bandwidth since we don't use it '''
-    nobj = copy.deepcopy(obj)
-    try:
-        del nobj['_id']
-    except (KeyError, TypeError):
-        pass
-    return nobj
+#         Saves bandwidth since we don't use it '''
+#     nobj = copy.deepcopy(obj)
+#     try:
+#         del nobj['_id']
+#     except (KeyError, TypeError):
+#         pass
+#     return nobj
 
 
-def demongo_cursor(cursor):
-    return [demongo(obj) for obj in cursor]
+# def demongo_cursor(cursor):
+#     return [demongo(obj) for obj in cursor]
 
 
 """ RawPictures - Facebook source image
@@ -66,6 +66,11 @@ RawPictures.ensure_index('facebook_id', unique=True, sparse=True)
         - views_total: number of views for all times.
         - score: score for the current period
         - score_total: score for all times.
+        - nb_favorited: nb of people who has it in favorites
+        - favorite_votes:
+        - favorite_votes_total:
+        - bonusmalus:
+        - bonusmalus_total:
         - has_won: a boolean to exclude some pictures (winners)
         - win_period:
         - win_score:
@@ -144,5 +149,15 @@ Events = db['events']
     fields:
         - type: ANONYMOUS or LOGGED_IN
         - ident: IP or FB id
-        - various facebook data """
+        - various facebook data
+        - nb_favorited: number of favs used
+        - favorites = [] """
 Users = db['users']
+
+""" Favorites - A face favorited by a user
+
+    fields:
+        - face_id
+        - user_id
+        - datetime """
+Favorites = db['favorites']

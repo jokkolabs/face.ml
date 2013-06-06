@@ -1,10 +1,33 @@
+
+var session_id = null;
 var fb_user_id = '';
 var ias;
 var DEFAULT_FACE_SIZE = 200;
-
+var tags = {};
+var favorites = [];
 
 function pageReload() {
     window.location.reload(true);
+}
+
+function is_in_favorites(face_id) {
+    return (favorites.indexOf(face_id) != -1);
+}
+
+function getSpacer(mini) {
+    var cls = "spacer";
+    if (mini === true)
+        cls = "minispacer";
+    var spacer = $("<div />");
+    spacer.attr('class', cls);
+    return spacer;
+}
+
+function addToolTip(elem, title) {
+    elem.attr('data-placement', "top");
+    elem.attr('data-toggle', "tooltip");
+    elem.attr('data-original-title', title);
+    elem.tooltip();
 }
 
 function createFaceImg(picture, face_size) {
@@ -14,6 +37,13 @@ function createFaceImg(picture, face_size) {
     var new_height = Math.floor(picture.source_height * face_size / picture.face_height);
     var margin_left = -Math.floor(new_width * picture.face_x / picture.source_width);
     var margin_top = -Math.floor(new_height * picture.face_y / picture.source_height);
+
+    var containerDiv = $("<div />");
+    containerDiv.attr('face_id', picture.face_id);
+    var tag = 'tag-' + picture.tag || 'NOTTAGGED';
+    containerDiv.attr('class', 'facemaincontainer '+ tag);
+    containerDiv.css('width', face_size + 20);
+    containerDiv.css('height', face_size + 20);
 
     var imgDiv = $("<div />");
     imgDiv.attr('picture_id', picture.picture_id);
@@ -30,7 +60,117 @@ function createFaceImg(picture, face_size) {
     img.attr('height', new_height);
     imgDiv.append(img);
 
-    return imgDiv;
+    var btnDiv = $("<div />");
+    btnDiv.attr('class', 'dropdown');
+
+    var iconEnlarge = $("<i class='icon-fullscreen' rel='prettyPhoto'></i>");
+    iconEnlarge.attr('href', picture.url);
+    addToolTip(iconEnlarge, "Agrandir (voir la photo complète).");
+
+    //class="btn btn-primary dropdown-toggle" data-toggle="dropdown"
+    var iconTag = $("<i class='icon-tags dropdown-toggle'></i>");
+    // iconTag.attr('title', "Attribuer un tag");
+    addToolTip(iconTag, "Cliquez pour donner votre avis !");
+    iconTag.attr('data-toggle', "dropdown");
+    iconTag.attr('role', "button");
+    var tagMenu = $("<ul />");
+    tagMenu.attr('class', 'dropdown-menu');
+    for (var tag_id in tags) {
+        var tagItem = $("<li />");
+        tagItem.attr('tag_id', tag_id);
+        tagItem.attr('face_id', picture.face_id);
+        var tagLink = $("<a />");
+        tagLink.click(function(){
+            var face_id = $(this).parent().attr('face_id');
+            var tag_id = $(this).parent().attr('tag_id');
+            console.log("Tagged PIC " + face_id + " with " + tag_id);
+            // send post to tag pic
+        });
+
+        var textureSpan = $("<span />");
+        textureSpan.attr('class', 'texture tag-' + tag_id);
+        var nameSpan = $("<span />");
+        nameSpan.html(tags[tag_id]);
+        var numberSpan = $("<span />");
+        numberSpan.html(4);
+
+        tagLink.append(textureSpan);
+        tagLink.append(numberSpan);
+        tagLink.append(nameSpan);
+        tagItem.append(tagLink);
+        tagMenu.append(tagItem);
+    }
+
+    var iconScore = $("<i class='icon-thumbs-up'></i>");
+    var titleScore = "Score";
+    // iconScore.attr('title', titleScore);
+    addToolTip(iconScore, titleScore);
+    var textScore = $("<span />");
+    textScore.attr('class', 'score-text');
+    // textScore.attr('title', titleScore);
+    addToolTip(textScore, titleScore);
+    textScore.html(picture.score || 0);
+
+    var iconViews = $("<i class='icon-eye-open'></i>");
+    var titleViews = "Nombre de vues";
+    // iconViews.attr('title', titleViews);
+    addToolTip(iconViews, titleViews);
+    var textViews = $("<span />");
+    // textViews.attr('title', titleViews);
+    addToolTip(textViews, titleViews);
+    textViews.html(picture.views || 0);
+
+    var iconFav = $("<i class='icon-star'></i>");
+    // iconFav.attr('title', "Ajouter à vos favoris");
+    addToolTip(iconFav, "Ajouter à vos favoris");
+    $(iconFav).click(function(){
+        console.log("FACE TO FAV: "+ picture.face_id);
+        $.post('/add_to_fav', {'face_id': picture.face_id,
+                               'session_id': session_id})
+            .done(function(response){
+                console.log(response);
+                var btnDiv = $(this).parent;
+                console.log(btnDiv);
+                // btnDiv.append(getSpacer());
+                // btnDiv.append(iconInFav);
+           });
+    });
+    var textFav = $("<span />");
+    // textFav.attr('title', "Nombre de personnes l'ayant en favoris");
+    addToolTip(textFav, "Nombre de personnes l'ayant en favoris");
+    textFav.html(picture.nb_favorited || 0);
+
+    var iconInFav = $("<i class='icon-bookmark'></i>");
+    // iconInFav.attr('title', "C'est un de vos favoris.");
+    addToolTip(iconInFav, "C'est un de vos favoris.");
+
+    btnDiv.append(getSpacer());
+    btnDiv.append(iconEnlarge);
+    btnDiv.append(getSpacer(true));
+    btnDiv.append(getSpacer());
+    btnDiv.append(iconTag);
+    btnDiv.append(tagMenu);
+    btnDiv.append(getSpacer());
+    btnDiv.append(getSpacer(true));
+    btnDiv.append(iconScore);
+    btnDiv.append(textScore);
+    btnDiv.append(getSpacer());
+    btnDiv.append(iconViews);
+    btnDiv.append(getSpacer(true));
+    btnDiv.append(textViews);
+    btnDiv.append(getSpacer());
+    btnDiv.append(iconFav);
+    btnDiv.append(getSpacer(true));
+    btnDiv.append(textFav);
+    if (is_in_favorites(picture.face_id) === true) {
+        btnDiv.append(getSpacer());
+        btnDiv.append(iconInFav);
+    }
+
+    containerDiv.append(imgDiv);
+    containerDiv.append(btnDiv);
+
+    return containerDiv;
 }
 
 function getParameterByName( name, href )
@@ -49,8 +189,11 @@ function getParameterByName( name, href )
 
 
 function load_startup_data() {
-	// launch on first display of Home Page
-    refresh();
+	// request session ID
+    $.get('/reg_anonymous').done(function (response){
+        session_id = response.data.session_id;
+        refresh();
+    });
 }
 
 
@@ -76,14 +219,26 @@ function facebook_login_callback(response) {
 
 
 function refresh() {
-	$.get('/refresh', {'fb_user_id': fb_user_id}, function(response) {
+	$.get('/refresh', {'session_id': session_id}).done(function(response) {
 		console.log("refreshed: " + response);
-        $("#winner_pic").html(createFaceImg(response.data.winner, 250));
+        $(response.data.favorites).each(function (idx, favorite) {
+            favorites.push(favorite.face_id);
+        });
+        console.log(response.data);
+        tags = response.data.all_tags;
+        // $("#winner_pic").html(createFaceImg(response.data.winner, 250));
         $("#left_pic").html(createFaceImg(response.data.left));
         $("#right_pic").html(createFaceImg(response.data.right));
-        $("#nbvoteright").html(response.data.right.nb_votes);
-        $("#nbvoteleft").html(response.data.left.nb_votes);
-        $("#nbvotewinner").html(response.data.winner.nb_votes);
+        // $("#nbvoteright").html(response.data.right.nb_votes);
+        // $("#nbvoteleft").html(response.data.left.nb_votes);
+        // $("#nbvotewinner").html(response.data.winner.nb_votes);
+        $("i[rel^='prettyPhoto']").prettyPhoto({
+            show_title: false,
+            show_description: false,
+            theme: 'light_square',
+            modal: false,
+            social_tools: '',
+        });
 	});
 }
 
@@ -198,6 +353,7 @@ function startupLoadStep2() {
     var line_tmpl = "<div class='row-fluid' />";
 
     $.getJSON('/picture_facing', function(response) {
+        console.log(response);
         var facebook_id = response.data.picture.facebook_id;
         console.log(facebook_id);
 
@@ -326,32 +482,6 @@ function startupLoadStep2() {
                 console.log("detached picture "+response);
                 pageReload();
             });
-        });
-    });
-}
-
-
-function gallery(){
-    var nb_per_line = 6;
-    var container = $(".container");
-    var line_tmpl = "<div class='row-fluid' />";
-    var line;
-    console.log("gallery");
-    $.getJSON('/pictures_for_gallery').done(function (response){
-        console.log("pictures for gallery " + response);
-        $.each(response.data, function (idx, picture) {
-            var facebook_id = picture.facebook_id;
-            var faceimg = createFaceImg(picture);
-            console.log(idx);
-            console.log(picture.url);
-
-            var imgdiv = $("<div />");
-            imgdiv.attr('class', 'span' + 12/nb_per_line);
-            if (idx % nb_per_line === 0) {
-                imgdiv.append(faceimg);
-                faceimg = $(line_tmpl);
-            }
-            container.append(imgdiv);
         });
     });
 }

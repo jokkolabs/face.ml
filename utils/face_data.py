@@ -7,13 +7,23 @@ from __future__ import (unicode_literals, absolute_import,
 import random
 
 from utils import _FACE_ID
-from utils.database import FacePictures, demongo, demongo_cursor
+from utils.database import FacePictures
+from utils.computations import compute_score_for
 
 
-def get_face_from(face_id):
+def get_face_from(face_id, update_views=False):
     ''' return a FacePictures obj from `face_id` '''
     global FacePictures
-    return demongo(FacePictures.find_one({_FACE_ID: face_id}))
+    face = FacePictures.find_one({_FACE_ID: face_id})
+    if update_views:
+        add_one_view_to(face)
+    return face
+
+
+def update_face(face, data):
+    global FacePictures
+    face.update(data)
+    FacePictures.save(face)
 
 
 def get_current_winner():
@@ -21,20 +31,23 @@ def get_current_winner():
     return FacePictures.find_one(sort={'score': -1}, limit=1)
 
 
-def get_random_face(extra_query=None):
+def get_random_face(extra_query=None, update_views=False):
     global FacePictures
     cursor = FacePictures.find(extra_query)
     nb_faces = cursor.count()
-    rand = random.randint(0, nb_faces)
+    rand = random.randint(0, nb_faces - 1)
     try:
-        return demongo(cursor[rand:rand][0])
+        face = cursor[rand:rand][0]
+        add_one_view_to(face)
+        return face
     except KeyError:
         return None
 
 
-def get_random_oponents():
-    left = get_random_face()
-    right = get_random_face({_FACE_ID: {'$ne': left.get(_FACE_ID)}})
+def get_random_oponents(update_views=False):
+    left = get_random_face(update_views=update_views)
+    right = get_random_face({_FACE_ID: {'$ne': left.get(_FACE_ID)}},
+                            update_views=update_views)
     return (left, right)
 
 
@@ -70,10 +83,10 @@ def get_gallery_faces(sort_order='-chrono', with_tags=None,
 
     query = {'tag': {'$in': with_tags}}
 
-    return demongo_cursor(FacePictures.find(query,
-                                            sort=sort_query,
-                                            limit=limit,
-                                            skip=page * limit))
+    return FacePictures.find(query,
+                             sort=sort_query,
+                             limit=limit,
+                             skip=page * limit)
 
 
 # is in user favorite?
@@ -88,3 +101,12 @@ def update_votes_for(face_id):
     # add Vote
     # Update FacePictures
     pass
+
+
+def add_one_view_to(face):
+    new_views = face.get('views', 0) + 1
+    new_views_total = face.get('views_total', 0) + 1
+    new_score = compute_score_for(face)
+    update_face(face, {'views': new_views,
+                       'views_total': new_views_total,
+                       'score': new_score})

@@ -8,7 +8,7 @@ import uuid
 import datetime
 
 from utils import _FACE_ID, FACE_DONE, FACE_PICTURE, NOTTAGGED, _FACEBOOK_ID
-from utils.database import FacePictures, demongo, demongo_cursor
+from utils.database import FacePictures
 from utils.raw_pictures import get_raw_picture_by, update_raw_picture
 from utils.face_data import get_face_from
 
@@ -31,17 +31,18 @@ def get_raw_picture_for_facing(facebook_id=None):
     picture = get_raw_picture_by(facebook_id,
                                  extra_query={'type': FACE_PICTURE},
                                  select=['url', _FACEBOOK_ID, 'type'])
-    faces = get_faces_for_raw_picture(facebook_id)
-
-    return {'picture': picture,
-            'faces': faces}
+    if not picture is None:
+        faces = get_faces_for_raw_picture(picture.get(_FACEBOOK_ID))
+    else:
+        faces = []
+    return (picture, faces)
 
 
 def create_single_face(facebook_id, x, y, width, height):
     raw_picture = get_raw_picture_by(facebook_id)
     picture = create_face_picture(raw_picture.get('url'),
                                   facebook_id, x, y, width, height)
-    return demongo(picture)
+    return picture
 
 
 def create_face_picture(url, facebook_id, x, y, width, height):
@@ -66,10 +67,15 @@ def create_face_picture(url, facebook_id, x, y, width, height):
            'views_total': 0,
            'score': 0,
            'score_total': 0,
+           'nb_favorited': 0,
+           'favorite_votes': 0,
+           'favorite_votes_total': 0,
+           'bonusmalus': [],
+           'bonusmalus_total': [],
            'has_won': False}
     FacePictures.insert(doc)
     return get_face_from(face_id)
 
 
 def get_faces_for_raw_picture(facebook_id):
-    return demongo_cursor(FacePictures.find({_FACEBOOK_ID: facebook_id}))
+    return FacePictures.find({_FACEBOOK_ID: facebook_id})

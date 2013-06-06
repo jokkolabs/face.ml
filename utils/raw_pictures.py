@@ -8,7 +8,7 @@ from __future__ import (unicode_literals, absolute_import,
 from pymongo.errors import DuplicateKeyError
 
 from utils import UNKNOWN, FACE_PICTURE, BAD_PICTURE, _FACEBOOK_ID
-from utils.database import RawPictures, demongo_cursor
+from utils.database import RawPictures
 
 
 def create_raw_from_url(url, url_small=None, owner_id=None):
@@ -60,6 +60,7 @@ def get_raw_picture_by(facebook_id, extra_query=None, select=None):
     raw_picture = RawPictures.find_one(query, fields=select)
     if not raw_picture:
         return False
+    return raw_picture
 
 
 def update_raw_picture(facebook_id, update_query):
@@ -77,7 +78,7 @@ def list_raw_pictures_unknown(limit=20):
     dbreq = RawPictures.find({'type': UNKNOWN},
                              fields=['url', 'url_thumbnail', _FACEBOOK_ID],
                              limit=limit)
-    return demongo_cursor(dbreq)
+    return dbreq
 
 
 def mark_raw_picture_confirmed(facebook_id, picture_width, picture_height):

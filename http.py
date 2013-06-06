@@ -10,7 +10,9 @@ from api import (process_user_stream, refresh, unknown_pictures_list,
                  confirm_raw_picture, detach_raw_picture,
                  raw_picture_for_facing, add_single_face,
                  complete_raw_picture, detach_face,
-                 update_facebook_user_details)
+                 update_facebook_user_details,
+                 get_anonymous_session,
+                 add_face_to_favorite)
 
 # app = Flask('face_server')
 # app.debug = True
@@ -36,6 +38,7 @@ def gallery():
 def imam():
     return open('imam.html', 'r').read()
 
+app.route('/reg_anonymous')(get_anonymous_session)
 app.route('/fbget')(process_user_stream)
 app.route('/fbupdate', methods=['POST'])(update_facebook_user_details)
 # app.route('/vote')(vote)
@@ -50,6 +53,7 @@ app.route('/complete_raw_picture', methods=['POST'])(complete_raw_picture)
 # app.route('/pictures_for_gallery')(pictures_for_gallery)
 # app.route('/gallery')(gallery)
 
+app.route('/add_to_fav', methods=['POST'])(add_face_to_favorite)
 
 if __name__ == '__main__':
     try:

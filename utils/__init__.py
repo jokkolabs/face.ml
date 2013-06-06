@@ -4,6 +4,7 @@
 
 from __future__ import (unicode_literals, absolute_import,
                         division, print_function)
+import datetime
 
 # default tag
 NOTTAGGED = "NOTTAGGED"
@@ -32,6 +33,8 @@ GALLERY = 'GALLERY'
 MAX_VOTES_LOGGED_IN = 10
 MAX_VOTES_ANONYMOUS = 3
 
+NB_MAX_FAVORITES = 9
+
 # Mongo DB field index
 _FACE_ID = 'face_id'
 _FROM = 'from'
@@ -40,6 +43,15 @@ _FACEBOOK_ID = 'facebook_id'
 
 # Tags
 TAGS = {
-    'sexy': {'name': u"Sexy", 'color': '#ff0000'},
-    'vulgar': {'name': u"Vulgaire", 'color': '#000000'},
+    'sexy': "Sexy",
+    'vulgar': "Vulgaire",
+    'not_natural': "Chacho !"
 }
+
+
+def now():
+    return datetime.datetime.now()
+
+
+def today():
+    return datetime.date.today()

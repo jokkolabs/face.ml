@@ -1,4 +1,14 @@
 
+div.facemaincontainer {
+    padding-left: 20px;
+    padding-top: 20px;
+
+    /*border: 1px solid #666666;*/
+	-webkit-border-radius: 5px;
+	-moz-border-radius: 5px;
+	border-radius: 5px;
+}
+
 div.facecontainer {
     overflow: hidden;
     background-color: #CCC;
@@ -28,4 +38,57 @@ div.facecontainer  img {
 
 .notdisplayed {
 	display:none;
+}
+
+.spacer, .minispacer {
+	display: inline-block;
+	height: 14px;
+	min-width: 12px;
+}
+
+.minispacer {
+	display: inline-block;
+	height: 14px;
+	min-width: 3px;
+}
+
+.tag-NOTTAGGED {
+	background-color: #afafaf;
+}
+
+.tag-sexy {
+	background-color: violet;
+}
+
+.tag-vulgar {
+	background-color: black;
+}
+
+.tag-not_natural {
+	background-color: red;
+}
+
+.score-text {
+	font-weight: bold;
+}
+
+
+.facemaincontainer [class^="icon-"]:hover,
+.facemaincontainer [class^="icon-"]:focus,
+.facemaincontainer [class^="icon-"]:hover {
+  background-image: url("../img/glyphicons-halflings-white.png");
+}
+
+.icon-fullscreen, .icon-tags, .icon-star {
+	cursor: pointer;
+}
+
+.texture {
+	min-width: 10px;
+	min-height: 10px;
+	display: inline-block;
+}
+
+.facemaincontainer li a span {
+	margin-right: 10px;
 }
