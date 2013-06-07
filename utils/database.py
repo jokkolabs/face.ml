@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # encoding=utf-8
 
-import copy
-
 from pymongo import MongoClient
 
 from utils import _FACE_ID, _FROM, _FROM_TYPE
@@ -150,6 +148,8 @@ Events = db['events']
         - type: ANONYMOUS or LOGGED_IN
         - ident: IP or FB id
         - various facebook data
+        - nb_remaing_votes_regular:
+        - nb_remaing_votes_favorite:
         - nb_favorited: number of favs used
         - favorites = [] """
 Users = db['users']

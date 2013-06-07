@@ -11,12 +11,15 @@ import requests
 from utils.raw_pictures import create_raw_from_url
 
 
-def get_data_from_fql(query, token):
+def get_data_from_fql(query, token, as_fql=True):
     """ Get the JSON result of an FQL request """
-
-    url = 'https://graph.facebook.com/fql'
-    params = {'q': query,
-              'access_token': token}
+    params = {'access_token': token}
+    url = 'https://graph.facebook.com'
+    if as_fql:
+        url += '/fql'
+        params.update({'q': query})
+    else:
+        url += query
     req = requests.get(url, params=params)
     if not req.status_code in (200, 201):
         return None
@@ -28,6 +31,7 @@ def get_data_from_fql(query, token):
 
 def extract_image_urls_from_fbdata(data, token):
     def add_url(url, url_small=None, owner=None):
+        print("trying to add %s" % url)
         create_raw_from_url(url, url_small, owner)
 
     def request_album_pics(aid):

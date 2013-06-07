@@ -30,6 +30,106 @@ function addToolTip(elem, title) {
     elem.tooltip();
 }
 
+function updateFavorites(data) {
+    if (data.favorites !== undefined && data.favorites !== null)
+        favorites = data.favorites;
+}
+
+function getBookmarkIndicator() {
+    var iconInFav = $("<i class='icon-bookmark'></i>");
+    addToolTip(iconInFav, "C'est un de vos favoris.");
+    return iconInFav;
+}
+
+function addBookmarkFlag(faceElem, face_data) {
+    try {
+        faceElem.find(".icon-bookmark").remove();
+    } catch (e) {}
+
+    if (is_in_favorites(face_data.face_id) === true) {
+        var iconInFav = getBookmarkIndicator();
+        var btnDiv = faceElem.find('.btndiv').first();
+        btnDiv.append(iconInFav);
+    }
+}
+
+function updateFaceFromMiniRefresh(face_data, faceElem) {
+    console.log("updateFaceFromMiniRefresh");
+
+    // get div.facemaincontainer
+    if (faceElem === undefined || faceElem === null)
+        faceElem = $('div.facemaincontainer[face_id="'+ face_data.face_id +'"]');
+
+    // update User's favs list
+    updateFavorites(face_data);
+
+    // update text of # of favs
+    var textFav = faceElem.find(".text-numfavs").first();
+    textFav.html(face_data.nb_favorited || 0);
+
+    // update Tags menu
+    var tagMenu = getTagsMenu(face_data);
+    var existingMenu = faceElem.find('.dropdown-menu').first();
+    existingMenu.html(tagMenu.html());
+    existingMenu.find("a").click(onClickOnTagIcon);
+
+    // update tag class/color
+    faceElem.attr('class', 'facemaincontainer tag-'+ face_data.tag);
+
+    // add bookmark flag
+    addBookmarkFlag(faceElem, face_data);
+
+}
+
+function onClickOnTagIcon(){
+    console.log("CLICK TAG");
+    var face_id = $(this).parent().attr('face_id');
+    var tag_id = $(this).parent().attr('tag_id');
+    console.log("Tagged PIC " + face_id + " with " + tag_id);
+    // send post to tag pic
+    $.post('/tag_face', {'face_id': face_id,
+                         'tag_id': tag_id,
+                         'session_id': session_id})
+    .done(function (response) {
+        console.log("TAGGED!")
+        updateFaceFromMiniRefresh(response.data);
+    });
+}
+
+
+function getTagsMenu(data) {
+    var tagMenu = $("<ul />");
+    tagMenu.attr('class', 'dropdown-menu');
+    // tagMenu.attr('ident', 'tags-menu');
+    for (var tag_id in tags) {
+        var tagItem = $("<li />");
+        tagItem.attr('tag_id', tag_id);
+        tagItem.attr('face_id', data.face_id);
+        var tagLink = $("<a />");
+        $(tagLink).click(onClickOnTagIcon);
+
+        var number = 0;
+        if (tag_id in data.tags) {
+            number = data.tags[tag_id];
+        }
+
+        var textureSpan = $("<span />");
+        textureSpan.attr('class', 'texture tag-' + tag_id);
+        var nameSpan = $("<span />");
+        nameSpan.html(tags[tag_id]);
+        var numberSpan = $("<span />");
+        numberSpan.html(number);
+
+        tagLink.append(textureSpan);
+        tagLink.append(numberSpan);
+        tagLink.append(nameSpan);
+        tagItem.append(tagLink);
+        tagMenu.append(tagItem);
+    }
+    return tagMenu;
+}
+
+
 function createFaceImg(picture, face_size) {
     if (face_size === null || face_size === undefined)
         face_size = DEFAULT_FACE_SIZE;
@@ -52,16 +152,28 @@ function createFaceImg(picture, face_size) {
     imgDiv.css('height', face_size);
 
     var img = $('<img />');
+    img.attr('class', 'face-img');
     img.attr('picture_id', picture.picture_id);
     img.attr('src', picture.url);
     img.css('margin-left', margin_left);
     img.css('margin-top', margin_top);
     img.attr('width', new_width);
     img.attr('height', new_height);
+    img.click(function () {
+        console.log("VOTING !");
+        var face_id = $(this).parent().parent().attr('face_id');
+        $.post('/vote_face', {'face_id': face_id,
+                              'session_id': session_id})
+            .done(function(response){
+                console.log("vote registered.");
+                refresh();
+            });
+    });
     imgDiv.append(img);
 
     var btnDiv = $("<div />");
-    btnDiv.attr('class', 'dropdown');
+    btnDiv.attr('class', 'dropdown btndiv');
+    btnDiv.css('width', face_size);
 
     var iconEnlarge = $("<i class='icon-fullscreen' rel='prettyPhoto'></i>");
     iconEnlarge.attr('href', picture.url);
@@ -73,78 +185,46 @@ function createFaceImg(picture, face_size) {
     addToolTip(iconTag, "Cliquez pour donner votre avis !");
     iconTag.attr('data-toggle', "dropdown");
     iconTag.attr('role', "button");
-    var tagMenu = $("<ul />");
-    tagMenu.attr('class', 'dropdown-menu');
-    for (var tag_id in tags) {
-        var tagItem = $("<li />");
-        tagItem.attr('tag_id', tag_id);
-        tagItem.attr('face_id', picture.face_id);
-        var tagLink = $("<a />");
-        tagLink.click(function(){
-            var face_id = $(this).parent().attr('face_id');
-            var tag_id = $(this).parent().attr('tag_id');
-            console.log("Tagged PIC " + face_id + " with " + tag_id);
-            // send post to tag pic
-        });
 
-        var textureSpan = $("<span />");
-        textureSpan.attr('class', 'texture tag-' + tag_id);
-        var nameSpan = $("<span />");
-        nameSpan.html(tags[tag_id]);
-        var numberSpan = $("<span />");
-        numberSpan.html(4);
-
-        tagLink.append(textureSpan);
-        tagLink.append(numberSpan);
-        tagLink.append(nameSpan);
-        tagItem.append(tagLink);
-        tagMenu.append(tagItem);
-    }
+    var tagMenu = getTagsMenu(picture);
 
     var iconScore = $("<i class='icon-thumbs-up'></i>");
     var titleScore = "Score";
-    // iconScore.attr('title', titleScore);
+
     addToolTip(iconScore, titleScore);
     var textScore = $("<span />");
     textScore.attr('class', 'score-text');
-    // textScore.attr('title', titleScore);
+
     addToolTip(textScore, titleScore);
     textScore.html(picture.score || 0);
 
     var iconViews = $("<i class='icon-eye-open'></i>");
     var titleViews = "Nombre de vues";
-    // iconViews.attr('title', titleViews);
+
     addToolTip(iconViews, titleViews);
     var textViews = $("<span />");
-    // textViews.attr('title', titleViews);
+
     addToolTip(textViews, titleViews);
     textViews.html(picture.views || 0);
 
     var iconFav = $("<i class='icon-star'></i>");
-    // iconFav.attr('title', "Ajouter à vos favoris");
+
     addToolTip(iconFav, "Ajouter à vos favoris");
     $(iconFav).click(function(){
         console.log("FACE TO FAV: "+ picture.face_id);
         $.post('/add_to_fav', {'face_id': picture.face_id,
                                'session_id': session_id})
             .done(function(response){
-                console.log(response);
-                var btnDiv = $(this).parent;
-                console.log(btnDiv);
-                // btnDiv.append(getSpacer());
-                // btnDiv.append(iconInFav);
+                updateFaceFromMiniRefresh(response.data);
            });
     });
     var textFav = $("<span />");
-    // textFav.attr('title', "Nombre de personnes l'ayant en favoris");
+    textFav.attr('class', 'text-numfavs');
+
     addToolTip(textFav, "Nombre de personnes l'ayant en favoris");
     textFav.html(picture.nb_favorited || 0);
 
-    var iconInFav = $("<i class='icon-bookmark'></i>");
-    // iconInFav.attr('title', "C'est un de vos favoris.");
-    addToolTip(iconInFav, "C'est un de vos favoris.");
-
-    btnDiv.append(getSpacer());
+    // btnDiv.append(getSpacer());
     btnDiv.append(iconEnlarge);
     btnDiv.append(getSpacer(true));
     btnDiv.append(getSpacer());
@@ -162,13 +242,11 @@ function createFaceImg(picture, face_size) {
     btnDiv.append(iconFav);
     btnDiv.append(getSpacer(true));
     btnDiv.append(textFav);
-    if (is_in_favorites(picture.face_id) === true) {
-        btnDiv.append(getSpacer());
-        btnDiv.append(iconInFav);
-    }
 
     containerDiv.append(imgDiv);
     containerDiv.append(btnDiv);
+
+    addBookmarkFlag(containerDiv, picture);
 
     return containerDiv;
 }
@@ -190,7 +268,7 @@ function getParameterByName( name, href )
 
 function load_startup_data() {
 	// request session ID
-    $.get('/reg_anonymous').done(function (response){
+    $.get('/request_session').done(function (response){
         session_id = response.data.session_id;
         refresh();
     });
@@ -202,16 +280,10 @@ function facebook_login_callback(response) {
 		console.log('Welcome!  Fetching your information.... ');
 		var access_token = FB.getAuthResponse()['accessToken'];
 		console.log('Access Token = '+ access_token);
-		$.get('/fbget', {'token': access_token});
-
-		FB.api('/me', function(response) {
-			console.log('Good to see you, ' + response.first_name + '.');
-			console.log(response);
-			fb_user_id = response.id;
-			$.post('/fbupdate', response).done(function (resp) {
-				refresh();
-			});
-		});
+		$.get('/fbget', {'token': access_token})
+            .done(function (response) {
+                session_id = response.data.session_id;
+            });
 	} else {
 		console.log('User cancelled login or did not fully authorize.');
 	}
@@ -221,17 +293,12 @@ function facebook_login_callback(response) {
 function refresh() {
 	$.get('/refresh', {'session_id': session_id}).done(function(response) {
 		console.log("refreshed: " + response);
-        $(response.data.favorites).each(function (idx, favorite) {
-            favorites.push(favorite.face_id);
-        });
+        updateFavorites(response.data);
         console.log(response.data);
         tags = response.data.all_tags;
-        // $("#winner_pic").html(createFaceImg(response.data.winner, 250));
+        $("#winner_pic").html(createFaceImg(response.data.winner, 250));
         $("#left_pic").html(createFaceImg(response.data.left));
         $("#right_pic").html(createFaceImg(response.data.right));
-        // $("#nbvoteright").html(response.data.right.nb_votes);
-        // $("#nbvoteleft").html(response.data.left.nb_votes);
-        // $("#nbvotewinner").html(response.data.winner.nb_votes);
         $("i[rel^='prettyPhoto']").prettyPhoto({
             show_title: false,
             show_description: false,

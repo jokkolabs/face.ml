@@ -27,10 +27,18 @@ def user_ident_from_session(session_id):
     try:
         user_id, user_type = mc.get(session_id).split('#', 1)
         return user_id, user_type
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, AttributeError):
         return None, None
 
 
 def create_anonymous_session(req):
     ip_addr = req.remote_addr
     return create_session(ip_addr, ANONYMOUS)
+
+
+def add_to_cache(key, value):
+    mc.set(str(key), value)
+
+
+def get_from_cache(key):
+    return mc.get(str(key))

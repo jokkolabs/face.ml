@@ -34,6 +34,7 @@ MAX_VOTES_LOGGED_IN = 10
 MAX_VOTES_ANONYMOUS = 3
 
 NB_MAX_FAVORITES = 9
+NB_MAX_VOTES_FAVORITES = 1
 
 # Mongo DB field index
 _FACE_ID = 'face_id'
@@ -55,3 +56,19 @@ def now():
 
 def today():
     return datetime.date.today()
+
+
+def ensure_face(target_func):
+
+    def wrapper(*args, **kwargs):
+        from utils.face_data import get_face_from
+        face = kwargs.get('face', None)
+        if face is None:
+            raise Exception("@ensure_face decorator needs explicit face.")
+
+        if not isinstance(face, dict):
+            kwargs['face'] = get_face_from(face)
+
+        return target_func(*args, **kwargs)
+
+    return wrapper

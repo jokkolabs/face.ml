@@ -5,10 +5,12 @@
 from __future__ import (unicode_literals, absolute_import,
                         division, print_function)
 
-from utils import LOGGED_IN, NB_MAX_FAVORITES, now, _FACE_ID
+from utils import (LOGGED_IN, NB_MAX_FAVORITES, now, _FACE_ID,
+                   MAX_VOTES_LOGGED_IN, MAX_VOTES_ANONYMOUS,
+                   NB_MAX_VOTES_FAVORITES)
 from utils.database import Users, Favorites
 from utils.sessions import user_ident_from_session
-from utils.face_data import update_face, get_face_from
+from utils.face_data import update_face, get_face_from, update_winner_cache_if_winner
 
 
 def user_from_request(req):
@@ -34,7 +36,10 @@ def get_create_user_from(user_id, user_type=LOGGED_IN):
     global Users
     user = Users.find_one({'type': user_type, 'ident': user_id})
     if not user:
-        user_id = Users.insert({'type': user_type, 'ident': user_id})
+        max_votes_regular = MAX_VOTES_LOGGED_IN if user_type == LOGGED_IN else MAX_VOTES_ANONYMOUS
+        Users.insert({'type': user_type, 'ident': user_id,
+                      'nb_remaing_votes_regular': max_votes_regular,
+                      'nb_remaing_votes_favorite': NB_MAX_VOTES_FAVORITES})
         user = Users.find_one({'type': user_type, 'ident': user_id})
     return user
 
@@ -59,7 +64,6 @@ def create_favorite_for(user, face_id):
     global Favorites
     global Users
 
-    print("my favs: %s" % user.get('favorites', []))
     if face_id in user.get('favorites', []):
         return False
 
@@ -72,9 +76,12 @@ def create_favorite_for(user, face_id):
                       'datetime': now()})
 
     # update facepicture counter for favorites
-    face = get_face_from(face_id, raw=True)
+    face = get_face_from(face_id)
     update_face(face, {'nb_favorited': face.get('nb_favorited', 0) + 1})
 
     # update user counter + list of favs
     user.update({'favorites': user.get('favorites', []) + [face_id, ]})
     Users.save(user)
+
+    # maybe update winner cache
+    update_winner_cache_if_winner(face)

@@ -18,9 +18,9 @@ div.facecontainer  img {
     max-width : none;
 }
 
-#winner .facecontainer {
+/*#winner .facecontainer {
     border: 10px solid #666666;
-}
+}*/
 
 .confirmed{
             color: white;
@@ -79,6 +79,13 @@ div.facecontainer  img {
   background-image: url("../img/glyphicons-halflings-white.png");
 }
 
+.tag-vulgar.facemaincontainer [class^="icon-"] {
+	background-image: url("../img/glyphicons-halflings-white.png");
+}
+.tag-vulgar.facemaincontainer {
+	color: white;
+}
+
 .icon-fullscreen, .icon-tags, .icon-star {
 	cursor: pointer;
 }
@@ -91,4 +98,20 @@ div.facecontainer  img {
 
 .facemaincontainer li a span {
 	margin-right: 10px;
+}
+
+.face-img {
+	cursor: pointer;
+}
+
+.face-img:hover {
+	opacity: .7;
+}
+
+.btndiv {
+	text-align: center;
+}
+
+.btndiv * {
+	text-align: left;
 }
